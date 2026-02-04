@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Personal
+data.json
+*.log
+
+# Environments
+env/
+venv/
+.env
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/

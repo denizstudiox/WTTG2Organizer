@@ -1,0 +1,277 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WTTG2 ORGANIZER v2.0</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- HEADER -->
+        <header class="full-width">
+            <div>
+                <h1 class="glitch" style="margin-bottom:0; display:inline-block; margin-right:15px;">
+                    WTTG2_ORGANIZER_SYSTEM</h1>
+                <button class="btn" style="padding: 5px 10px; font-size: 0.7em;" onclick="shutdownSystem()">[
+                    EXIT_SYSTEM ]</button>
+                <button class="btn btn-hazard" style="padding: 5px 10px; font-size: 0.7em; margin-left:10px;"
+                    onclick="resetSystem()">[
+                    RESET_SYSTEM ]</button>
+                <button class="btn"
+                    style="padding: 5px 10px; font-size: 0.7em; margin-left:10px; color: #00ff41; border-color: #00ff41;"
+                    onclick="toggleHelp()">[ ? HELP ]</button>
+            </div>
+            <span id="status" class="status">CONNECTING...</span>
+        </header>
+
+        <!-- KEYS MODULE -->
+        <div class="panel full-width">
+            <h2>> DECRYPT_KEYS</h2>
+            <div id="keys-container">
+                {% for i in range(8) %}
+                <div class="key-row">
+                    <span class="key-label">{{ i + 1 }}</span>
+                    <input type="text" id="key-{{ i }}" class="key-input" placeholder="ENTER HASH..."
+                        data-key-index="{{ i }}">
+                    <!-- Wiki Markers -->
+                    <button id="wiki-btn-{{ i }}-0" class="wiki-btn" data-key-index="{{ i }}"
+                        data-marker-index="0">1</button>
+                    <button id="wiki-btn-{{ i }}-1" class="wiki-btn" data-key-index="{{ i }}"
+                        data-marker-index="1">2</button>
+                    <button id="wiki-btn-{{ i }}-2" class="wiki-btn" data-key-index="{{ i }}"
+                        data-marker-index="2">3</button>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="actions">
+                <button class="btn" onclick="copyKey()">[ COPY_MERGED_HASH ]</button>
+            </div>
+            <div class="output-area">
+                > OUTPUT: <span id="generated-key"></span>
+            </div>
+        </div>
+
+        <!-- SITES MODULE -->
+        <div class="panel">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                <h2>> TARGET_LIST</h2>
+                <div style="display:flex; gap: 15px; align-items:center;">
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-filter="all">ALL</button>
+                        <button class="filter-btn" data-filter="green">🟢</button>
+                        <button class="filter-btn" data-filter="red">🔴</button>
+                        <button class="filter-btn" data-filter="yellow">⭐</button>
+                    </div>
+
+                    <select id="site-sort" onchange="sortSites()">
+                        <option value="default">SORT_DEFAULT</option>
+                        <option value="alpha">SORT_A-Z</option>
+                        <option value="time">SORT_TIME</option>
+                        <option value="always">SORT_ALWAYS</option>
+                    </select>
+                    <input type="text" id="site-search" placeholder="SEARCH SITES..." oninput="filterSites()">
+                    <label style="cursor: pointer; font-size: 0.8em; white-space: nowrap;">
+                        <input type="checkbox" id="mode-toggle" onchange="toggle1337(this)">
+                        [ 1337_MODE ]
+                    </label>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SITE</th>
+                            <th>STATUS/THREAT</th>
+                            <th>MARK</th>
+                        </tr>
+                    </thead>
+                    <tbody id="site-table-body">
+                        <!-- Site List Data -->
+                        {% set sites = [
+                        ('The Doll Maker', 'Always', 'The Doll Maker', False),
+                        ('The Prey', 'Always (1337)', 'Noir', True),
+                        ('Little Friends', 'xx:45 - xx:59', 'SWAT', False),
+                        ('Evidence Locker', 'Always', 'SWAT', False),
+                        ('The Bombmaker', 'Always (1337)', 'SWAT', True),
+                        ('Borrow My Daughter', 'xx:00 - xx:29', 'SWAT / Lucas', False),
+                        ('Warehouse 33', 'Always (1337)', 'SWAT / Lucas', True),
+                        ('Brutal Underground', 'xx:30 - xx:59', 'The Breather', False),
+                        ('Order Of Nine', 'Always', 'The Breather', False),
+                        ('THE MAGISTRI', 'Always', 'The Breather', False),
+                        ('Ave Satan', 'xx:30 - xx:44', 'The Breather', False),
+                        ('The Loogaroo', 'Always (1337)', 'The Breather', True),
+                        ('YOU THERE?', 'xx:00 - xx:29', 'Breather / Lucas', False),
+                        ('Drone Spy', 'Always', 'Lucas (Fast)', False),
+                        ('Your Data', 'xx:30 - xx:44', 'Hackers', False),
+                        ('Red Triangle', 'xx:30 - xx:59', 'Lucas / Noir', False),
+                        ('Kill For Me', 'Always (1337)', 'Noir', True),
+                        ('Pay To R*pe', 'Always (1337)', 'Hackers / Lucas', True),
+                        ('THANATOS', 'xx:45 - xx:59', 'Lucas', False),
+                        ('Mortal Masks', 'Always', 'Lucas', False),
+                        ('Father Donald', 'Always (1337)', 'Lucas / Cult', True),
+                        ('Eye', 'Always', 'Lucas', False),
+                        ('EnCrave', 'Always', 'Hackers', False),
+                        ('Heirloom', 'Always', 'Hackers', False),
+                        ('Cry B*tch', 'Always', 'Hackers', False),
+                        ('Scream B*tch', 'Always (1337)', 'Hackers / Lucas', True),
+                        ('Hidden Pleasures', 'Always', 'Hackers', False),
+                        ('The Granddaddy', 'Always', 'Hackers', False),
+                        ('Share Your Genitals', 'Always', 'Hackers', False),
+                        ('Thanks For Visiting', 'Always', 'Lucas / Jump', False),
+                        ('Mutilation', 'Always', 'Lucas', False),
+                        ('Bug Friendly', 'Always', 'Lucas', False),
+                        ('Cleaning Services', 'Always', 'Lucas', False),
+                        ('Forgive Me', 'Always', 'Lucas', False),
+                        ('Is Evil', 'Always (1337)', 'Lucas', True),
+                        ('IAMHERE', 'xx:00 - xx:14', 'Lucas', False),
+                        ("Don't Waste It", 'xx:00 - xx:29', 'Lucas', False),
+                        ('The Rule Of Three', 'Always', 'Lucas', False),
+                        ('Oneless', 'Always', 'Lucas', False),
+                        ('BathRoom Cams', 'BROKEN / INSTAHACK', '', False),
+                        ('Black Market', 'BROKEN / INSTAHACK', '', False),
+                        ('Burned At The Stake', 'BROKEN / INSTAHACK', '', False),
+                        ('Cheap Surgery', 'BROKEN / INSTAHACK', '', False),
+                        ('Chosen Awake', 'BROKEN / INSTAHACK', '', False),
+                        ('Corpses for Sell', 'BROKEN / INSTAHACK', '', False),
+                        ('Cotton Road', 'BROKEN / INSTAHACK', '', False),
+                        ('DeDo', 'BROKEN / INSTAHACK', '', False),
+                        ('DEEPDOTWEB', 'BROKEN / INSTAHACK', '', False),
+                        ('Dream Place', 'BROKEN / INSTAHACK', '', False),
+                        ('Family Drug Shop', 'BROKEN / INSTAHACK', '', False),
+                        ('Flame', 'BROKEN / INSTAHACK', '', False),
+                        ('Flesh Trade', 'BROKEN / INSTAHACK', '', False),
+                        ('F*ck You!', 'BROKEN / INSTAHACK', '', False),
+                        ('GAME CAT', 'BROKEN / INSTAHACK', '', False),
+                        ('Hackers4Hire', 'BROKEN / INSTAHACK', '', False),
+                        ('Hail Satan', 'BROKEN / INSTAHACK', '', False),
+                        ('Happy Family', 'BROKEN / INSTAHACK', '', False),
+                        ('Hot Burners', 'BROKEN / INSTAHACK', '', False),
+                        ('Illumanti', 'BROKEN / INSTAHACK', '', False),
+                        ('Legion', 'BROKEN / INSTAHACK', '', False),
+                        ('Passports R US', 'BROKEN / INSTAHACK', '', False),
+                        ('Roses Desctruction', 'BROKEN / INSTAHACK', '', False),
+                        ('Secure Drop', 'BROKEN / INSTAHACK', '', False),
+                        ('SKYWEB', 'BROKEN / INSTAHACK', '', False),
+                        ('Snuff Portal', 'BROKEN / INSTAHACK', '', False),
+                        ('Tango Down', 'BROKEN / INSTAHACK', '', False),
+                        ('The 8th Sin', 'BROKEN / INSTAHACK', '', False),
+                        ('The Butcher', 'BROKEN / INSTAHACK', '', False),
+                        ('DeepVape', 'BROKEN / INSTAHACK (1337)', '', True),
+                        ('Deep Journal', 'xx:00 - xx:29 / SAFE', '', False),
+                        ('I Love Cats', 'Always / SAFE', '', False),
+                        ('Keep Sake', 'Always / SAFE', '', False),
+                        ('Myriad', 'Always / SAFE', '', False),
+                        ('St Louis Arch', 'Always / SAFE', '', False),
+                        ('The Black Waves', 'Always / SAFE', '', False),
+                        ('The End Of NY', 'Always / SAFE', '', False),
+                        ('The Grey', 'Always / SAFE', '', False),
+                        ('The Hall', 'Always / SAFE', '', False),
+                        ('The Light Within', 'Always / SAFE', '', False),
+                        ('Vacation', 'Always / SAFE', '', False),
+                        ('We Rock', 'Always / SAFE', '', False),
+                        ('Fifty Seven', 'xx:30 - xx:44 / SAFE', '', False),
+                        ('Number Station', 'xx:30 - xx:44 / SAFE', '', False),
+                        ('Fortune Cookie', 'xx:45 - xx:59 / SAFE', '', False)
+                        ] %}
+
+                        {% for name, time, threat, is1337 in sites %}
+                        <tr class="site-row {% if is1337 %}mode-1337-only{% endif %}" data-site="{{ name | replace("'", "&#39;") }}" data-time="{{ time }}" data-index="{{ loop.index0 }}">
+                            <td>
+                                {% if is1337 %}<span class="text-danger">[1337]</span> {% endif %}
+                                {{ name }}
+                            </td>
+                            <td>
+                                <div>{{ time }}</div>
+                                <div class="text-warning" style="font-size:0.8em;">{{ threat }}</div>
+                            </td>
+                            <td>
+                                <span class="marker-btn green" data-site-name="{{ name }}" data-color="green"></span>
+                            <span class="marker-btn red" data-site-name="{{ name }}" data-color="red"></span>
+                            <span class="marker-btn yellow" data-site-name="{{ name }}" data-color="yellow"></span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+
+            <!-- NOTES -->
+            <div class="panel">
+                <h2>> NOTES</h2>
+                <textarea id="notes-input" placeholder="LOG YOUR DATA HERE..."></textarea>
+            </div>
+
+            <!-- WIFI -->
+            <div class="panel">
+                <h2>> WIFI_CRACKER</h2>
+                <div id="wifi-list">
+                    <!-- Dynamic Items -->
+                </div>
+
+                <div class="wifi-form">
+                    <input type="text" id="wifi-ssid" placeholder="SSID (Name)">
+                    <input type="text" id="wifi-pass" placeholder="PASSWORD">
+                    <select id="wifi-loc">
+                        <option value="Alley Window">Alley Window (Desk)</option>
+                        <option value="Living Room">Living Room (Balcony)</option>
+                        <option value="Bedroom">Bedroom Window</option>
+                        <option value="Bathroom">Bathroom Window</option>
+                    </select>
+                    <button class="btn" onclick="addWifi()">[ SAVE_WIFI ]</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- HELP MODAL -->
+    <div id="help-modal" class="modal-overlay" style="display:none;" onclick="toggleHelp()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--accent-color); margin-bottom:15px; padding-bottom:5px;">
+                <h2 style="margin:0;">> SYSTEM_GUIDE</h2>
+                <button class="btn" style="padding:2px 10px;" onclick="toggleHelp()">X</button>
+            </div>
+            <div class="help-grid">
+                <div class="help-item">
+                    <h3>🟢 Status Markers</h3>
+                    <p>Track site progress. <br><b>Green:</b> Found/Safe <br><b>Red:</b> Guarded/Danger <br><b>Star:</b> High Priority</p>
+                </div>
+                <div class="help-item">
+                    <h3>⚡ 1337 Mode</h3>
+                    <p>Toggle to reveal high-tier websites and secret targets found in the game' s deep web.</p>
+            </div>
+            <div class="help-item">
+                <h3>🔑 Decrypt Keys</h3>
+                <p>Paste "Index - Hash" lines. The system auto-sorts and merges them. Click Copy to finalize.</p>
+            </div>
+            <div class="help-item">
+                <h3>📱 Mobile Sync</h3>
+                <p>Scan to connect or visit:</p>
+                <div
+                    style="background: rgba(0,0,0,0.5); padding: 10px; border: 1px dashed var(--primary-color); text-align: center;">
+                    <a id="mobile-link" href="#" target="_blank"
+                        style="color: var(--primary-color); font-size: 1.2em; text-decoration: none; font-weight: bold;">LOADING...</a>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top:20px; font-size:0.8em; color:var(--dim-text); text-align:center;">
+            WTTG2 Organizer v2.0 - Developed for Pro-Gamers
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>
